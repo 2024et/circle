@@ -6,7 +6,7 @@
     <title>円を描くゲーム</title>
     <style>
         body { text-align: center; }
-        canvas { border: 1px solid black; cursor: crosshair; }
+        canvas { border: 1px solid black; cursor: crosshair; touch-action: none; }
     </style>
 </head>
 <body>
@@ -28,27 +28,48 @@
             ctx.fill();
         }
 
-        canvas.addEventListener("mousedown", () => {
+        function startDrawing(x, y) {
             drawing = true;
             points = [];
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawCenterPoint();
-        });
+        }
 
-        canvas.addEventListener("mousemove", (e) => {
+        function moveDrawing(x, y) {
             if (!drawing) return;
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
             points.push({ x, y });
             ctx.fillStyle = "blue";
             ctx.fillRect(x, y, 2, 2);
-        });
+        }
 
-        canvas.addEventListener("mouseup", () => {
+        function stopDrawing() {
             drawing = false;
             evaluateCircle();
+        }
+
+        canvas.addEventListener("mousedown", (e) => {
+            startDrawing(e.offsetX, e.offsetY);
         });
+
+        canvas.addEventListener("mousemove", (e) => {
+            moveDrawing(e.offsetX, e.offsetY);
+        });
+
+        canvas.addEventListener("mouseup", stopDrawing);
+        canvas.addEventListener("mouseleave", stopDrawing);
+
+        canvas.addEventListener("touchstart", (e) => {
+            const rect = canvas.getBoundingClientRect();
+            startDrawing(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
+        });
+
+        canvas.addEventListener("touchmove", (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            moveDrawing(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
+        });
+
+        canvas.addEventListener("touchend", stopDrawing);
 
         function evaluateCircle() {
             if (points.length < 10) return;
@@ -57,8 +78,12 @@
             const avgX = sumX / points.length;
             const avgY = sumY / points.length;
             let sumRadius = 0;
+            let minRadius = Infinity, maxRadius = 0;
             points.forEach(p => {
-                sumRadius += Math.sqrt((p.x - avgX) ** 2 + (p.y - avgY) ** 2);
+                const r = Math.sqrt((p.x - avgX) ** 2 + (p.y - avgY) ** 2);
+                sumRadius += r;
+                if (r < minRadius) minRadius = r;
+                if (r > maxRadius) maxRadius = r;
             });
             const avgRadius = sumRadius / points.length;
             let variance = 0;
@@ -67,7 +92,10 @@
                 variance += (r - avgRadius) ** 2;
             });
             variance = Math.sqrt(variance / points.length);
-            let score = Math.max(0, 100 - variance * 10);
+            let roundness = Math.max(0, 100 - variance * 10);
+            let centerOffset = Math.sqrt((avgX - centerX) ** 2 + (avgY - centerY) ** 2);
+            let uniformity = 100 - ((maxRadius - minRadius) * 2);
+            let score = Math.max(0, (roundness * 0.6) + (uniformity * 0.3) + ((100 - centerOffset) * 0.1));
             document.getElementById("score").innerText = `スコア: ${Math.round(score)}`;
         }
 
