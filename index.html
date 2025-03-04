@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>円を描くゲーム</title>
+    <style>
+        body { text-align: center; }
+        canvas { border: 1px solid black; cursor: crosshair; }
+    </style>
+</head>
+<body>
+    <h1>円を描いてスコアを出そう！</h1>
+    <canvas id="gameCanvas" width="500" height="500"></canvas>
+    <p id="score">スコア: 0</p>
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        let drawing = false;
+        let points = [];
+
+        function drawCenterPoint() {
+            ctx.fillStyle = "red";
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        canvas.addEventListener("mousedown", () => {
+            drawing = true;
+            points = [];
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawCenterPoint();
+        });
+
+        canvas.addEventListener("mousemove", (e) => {
+            if (!drawing) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            points.push({ x, y });
+            ctx.fillStyle = "blue";
+            ctx.fillRect(x, y, 2, 2);
+        });
+
+        canvas.addEventListener("mouseup", () => {
+            drawing = false;
+            evaluateCircle();
+        });
+
+        function evaluateCircle() {
+            if (points.length < 10) return;
+            let sumX = 0, sumY = 0;
+            points.forEach(p => { sumX += p.x; sumY += p.y; });
+            const avgX = sumX / points.length;
+            const avgY = sumY / points.length;
+            let sumRadius = 0;
+            points.forEach(p => {
+                sumRadius += Math.sqrt((p.x - avgX) ** 2 + (p.y - avgY) ** 2);
+            });
+            const avgRadius = sumRadius / points.length;
+            let variance = 0;
+            points.forEach(p => {
+                const r = Math.sqrt((p.x - avgX) ** 2 + (p.y - avgY) ** 2);
+                variance += (r - avgRadius) ** 2;
+            });
+            variance = Math.sqrt(variance / points.length);
+            let score = Math.max(0, 100 - variance * 10);
+            document.getElementById("score").innerText = `スコア: ${Math.round(score)}`;
+        }
+
+        drawCenterPoint();
+    </script>
+</body>
+</html>
